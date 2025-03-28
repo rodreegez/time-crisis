@@ -2,6 +2,8 @@
 
 A sleek, mission-critical time tracking application with a modern, action-oriented interface. Time Crisis helps you track your activities with style and urgency.
 
+![Time Crisis Preview](time-crisis.png)
+
 🌐 **Start tracking your time now!** [https://rodreegez.github.io/time-crisis/](https://rodreegez.github.io/time-crisis/)
 
 ## Features
