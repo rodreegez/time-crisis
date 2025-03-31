@@ -104,6 +104,14 @@
             transition: transform 0.3s ease;
         }
 
+        .activity.active {
+            border-left: 4px solid #ff4d4d;
+        }
+
+        .activity.completed {
+            border-left: 4px solid #4CAF50;
+        }
+
         .activity:hover {
             transform: translateX(5px);
         }
@@ -178,6 +186,12 @@
             box-shadow: 0 0 10px rgba(255, 77, 77, 0.5);
         }
 
+        .duration {
+            color: #4CAF50;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -208,14 +222,36 @@
         // Load activities from localStorage
         let activities = JSON.parse(localStorage.getItem('timeTrackerActivities')) || [];
 
+        // Format duration
+        function formatDuration(startTime, endTime) {
+            if (!endTime) return 'In Progress';
+            
+            const duration = new Date(endTime) - new Date(startTime);
+            const hours = Math.floor(duration / (1000 * 60 * 60));
+            const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((duration % (1000 * 60)) / 1000);
+
+            if (hours > 0) {
+                return `${hours}h ${minutes}m ${seconds}s`;
+            } else if (minutes > 0) {
+                return `${minutes}m ${seconds}s`;
+            } else {
+                return `${seconds}s`;
+            }
+        }
+
         // Display activities
         function displayActivities() {
             activitiesList.innerHTML = activities
                 .map((activity, index) => `
-                    <div class="activity" data-index="${index}">
+                    <div class="activity ${!activity.ended_at ? 'active' : 'completed'}" data-index="${index}">
                         <div class="activity-content">
                             <div class="activity-text">${activity.text || 'No mission description'}</div>
-                            <div class="timestamp">${new Date(activity.timestamp).toLocaleString()}</div>
+                            <div class="timestamp">Started: ${new Date(activity.timestamp).toLocaleString()}</div>
+                            ${activity.ended_at ? 
+                                `<div class="timestamp">Ended: ${new Date(activity.ended_at).toLocaleString()}</div>` : 
+                                ''}
+                            <div class="duration">Duration: ${formatDuration(activity.timestamp, activity.ended_at)}</div>
                         </div>
                         <button class="edit-btn">Edit</button>
                     </div>
@@ -237,13 +273,29 @@
                     const hours = String(timestamp.getHours()).padStart(2, '0');
                     const minutes = String(timestamp.getMinutes()).padStart(2, '0');
                     const datetimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+                    // Format the end timestamp if it exists
+                    let endDateTimeLocal = '';
+                    if (activity.ended_at) {
+                        const endTimestamp = new Date(activity.ended_at);
+                        const endYear = endTimestamp.getFullYear();
+                        const endMonth = String(endTimestamp.getMonth() + 1).padStart(2, '0');
+                        const endDay = String(endTimestamp.getDate()).padStart(2, '0');
+                        const endHours = String(endTimestamp.getHours()).padStart(2, '0');
+                        const endMinutes = String(endTimestamp.getMinutes()).padStart(2, '0');
+                        endDateTimeLocal = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
+                    }
                     
                     // Replace content with edit form
                     activityDiv.innerHTML = `
                         <div class="activity-content">
                             <input type="text" class="edit-input" value="${activity.text || ''}" placeholder="What's your next mission?">
-                            <input type="datetime-local" class="datetime-input" value="${datetimeLocal}">
-                            <div class="timestamp">Original: ${new Date(activity.timestamp).toLocaleString()}</div>
+                            <div class="timestamp">Start Time:</div>
+                            <input type="datetime-local" class="datetime-input start-time" value="${datetimeLocal}">
+                            ${index > 0 || activity.ended_at ? `
+                                <div class="timestamp">End Time:</div>
+                                <input type="datetime-local" class="datetime-input end-time" value="${endDateTimeLocal || datetimeLocal}">
+                            ` : ''}
                         </div>
                         <button class="save-btn">Save</button>
                     `;
@@ -251,13 +303,23 @@
                     // Add event listener to save button
                     const saveBtn = activityDiv.querySelector('.save-btn');
                     const editInput = activityDiv.querySelector('.edit-input');
-                    const datetimeInput = activityDiv.querySelector('.datetime-input');
+                    const startTimeInput = activityDiv.querySelector('.start-time');
+                    const endTimeInput = activityDiv.querySelector('.end-time');
                     
                     saveBtn.addEventListener('click', () => {
                         activities[index].text = editInput.value.trim();
-                        // Convert the datetime-local value to ISO string
-                        const newDate = new Date(datetimeInput.value);
-                        activities[index].timestamp = newDate.toISOString();
+                        // Convert the datetime-local values to ISO strings
+                        const newStartDate = new Date(startTimeInput.value);
+                        activities[index].timestamp = newStartDate.toISOString();
+                        
+                        if (endTimeInput) {
+                            const newEndDate = new Date(endTimeInput.value);
+                            // Only set ended_at if this isn't the currently active task (index > 0)
+                            if (index > 0 || activities[index].ended_at) {
+                                activities[index].ended_at = newEndDate.toISOString();
+                            }
+                        }
+                        
                         localStorage.setItem('timeTrackerActivities', JSON.stringify(activities));
                         displayActivities();
                     });
@@ -271,10 +333,16 @@
             
             const activityText = input.value.trim();
 
+            // End the current active task if there is one
+            if (activities.length > 0 && !activities[0].ended_at) {
+                activities[0].ended_at = new Date().toISOString();
+            }
+
             // Create new activity
             const newActivity = {
                 text: activityText,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                ended_at: null
             };
 
             // Add to activities array
