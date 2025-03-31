@@ -186,6 +186,32 @@
             box-shadow: 0 0 10px rgba(255, 77, 77, 0.5);
         }
 
+        .time-adjust-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .time-adjust-btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .time-adjust-btn:hover {
+            background-color: #1976D2;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+        }
+
         .duration {
             color: #4CAF50;
             font-size: 0.875rem;
@@ -292,13 +318,55 @@
                             <input type="text" class="edit-input" value="${activity.text || ''}" placeholder="What's your next mission?">
                             <div class="timestamp">Start Time:</div>
                             <input type="datetime-local" class="datetime-input start-time" value="${datetimeLocal}">
+                            <div class="time-adjust-buttons">
+                                <button type="button" class="time-adjust-btn" data-target="start" data-minutes="-1" title="Rewind 1 minute">⏪1m</button>
+                                <button type="button" class="time-adjust-btn" data-target="start" data-minutes="-5" title="Rewind 5 minutes">⏪5m</button>
+                                <button type="button" class="time-adjust-btn" data-target="start" data-minutes="-15" title="Rewind 15 minutes">⏪15m</button>
+                                <button type="button" class="time-adjust-btn" data-target="start" data-minutes="-30" title="Rewind 30 minutes">⏪30m</button>
+                                <button type="button" class="time-adjust-btn" data-target="start" data-minutes="30" title="Forward 30 minutes">30m⏩</button>
+                                <button type="button" class="time-adjust-btn" data-target="start" data-minutes="15" title="Forward 15 minutes">15m⏩</button>
+                                <button type="button" class="time-adjust-btn" data-target="start" data-minutes="5" title="Forward 5 minutes">5m⏩</button>
+                                <button type="button" class="time-adjust-btn" data-target="start" data-minutes="1" title="Forward 1 minute">1m⏩</button>
+                            </div>
                             ${index > 0 || activity.ended_at ? `
                                 <div class="timestamp">End Time:</div>
                                 <input type="datetime-local" class="datetime-input end-time" value="${endDateTimeLocal || datetimeLocal}">
+                                <div class="time-adjust-buttons">
+                                    <button type="button" class="time-adjust-btn" data-target="end" data-minutes="-1" title="Rewind 1 minute">⏪1m</button>
+                                    <button type="button" class="time-adjust-btn" data-target="end" data-minutes="-5" title="Rewind 5 minutes">⏪5m</button>
+                                    <button type="button" class="time-adjust-btn" data-target="end" data-minutes="-15" title="Rewind 15 minutes">⏪15m</button>
+                                    <button type="button" class="time-adjust-btn" data-target="end" data-minutes="-30" title="Rewind 30 minutes">⏪30m</button>
+                                    <button type="button" class="time-adjust-btn" data-target="end" data-minutes="30" title="Forward 30 minutes">30m⏩</button>
+                                    <button type="button" class="time-adjust-btn" data-target="end" data-minutes="15" title="Forward 15 minutes">15m⏩</button>
+                                    <button type="button" class="time-adjust-btn" data-target="end" data-minutes="5" title="Forward 5 minutes">5m⏩</button>
+                                    <button type="button" class="time-adjust-btn" data-target="end" data-minutes="1" title="Forward 1 minute">1m⏩</button>
+                                </div>
                             ` : ''}
                         </div>
                         <button class="save-btn">Save</button>
                     `;
+
+                    // Add event listeners for time adjustment buttons
+                    activityDiv.querySelectorAll('.time-adjust-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const target = btn.dataset.target;
+                            const minutes = parseInt(btn.dataset.minutes);
+                            const input = activityDiv.querySelector(`.${target}-time`);
+                            
+                            // Get current datetime from input
+                            const currentDate = new Date(input.value);
+                            // Add minutes
+                            currentDate.setMinutes(currentDate.getMinutes() + minutes);
+                            
+                            // Format back to datetime-local string
+                            const newYear = currentDate.getFullYear();
+                            const newMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+                            const newDay = String(currentDate.getDate()).padStart(2, '0');
+                            const newHours = String(currentDate.getHours()).padStart(2, '0');
+                            const newMinutes = String(currentDate.getMinutes()).padStart(2, '0');
+                            input.value = `${newYear}-${newMonth}-${newDay}T${newHours}:${newMinutes}`;
+                        });
+                    });
 
                     // Add event listener to save button
                     const saveBtn = activityDiv.querySelector('.save-btn');
