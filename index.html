@@ -89,6 +89,7 @@
         #activities {
             border-top: 2px solid rgba(255, 77, 77, 0.3);
             padding-top: 1rem;
+            position: relative;
         }
 
         .activity {
@@ -102,6 +103,8 @@
             backdrop-filter: blur(10px);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
+            position: relative;
+            z-index: 1;
         }
 
         .activity.active {
@@ -114,6 +117,7 @@
 
         .activity:hover {
             transform: translateX(5px);
+            z-index: 100;
         }
 
         .activity-content {
@@ -269,6 +273,87 @@
             margin-top: 0.25rem;
         }
 
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag {
+            background-color: #6c757d;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .tag-remove:hover {
+            opacity: 1;
+        }
+
+        .tag-input-container {
+            position: relative;
+            margin-top: 0.5rem;
+            z-index: 200;
+        }
+
+        .tag-input {
+            width: 100%;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border: 1px solid rgba(255, 77, 77, 0.3);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .tag-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .tag-input:focus {
+            outline: none;
+            border-color: #ff4d4d;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .tag-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid #ff4d4d;
+            border-radius: 4px;
+            margin-top: 0.25rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .tag-suggestion {
+            padding: 0.5rem;
+            cursor: pointer;
+            color: white;
+        }
+
+        .tag-suggestion:hover {
+            background-color: rgba(255, 77, 77, 0.2);
+        }
+
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -306,6 +391,7 @@
 
         // Load activities from localStorage
         let activities = JSON.parse(localStorage.getItem('timeTrackerActivities')) || [];
+        let tags = JSON.parse(localStorage.getItem('timeTrackerTags')) || [];
 
         // Format duration
         function formatDuration(startTime, endTime) {
@@ -337,6 +423,18 @@
                                 `<div class="timestamp">Ended: ${new Date(activity.ended_at).toLocaleString()}</div>` : 
                                 ''}
                             <div class="duration">Duration: ${formatDuration(activity.timestamp, activity.ended_at)}</div>
+                            <div class="tags">
+                                ${(activity.tags || []).map(tag => `
+                                    <span class="tag">
+                                        ${tag}
+                                        <span class="tag-remove" data-tag="${tag}">×</span>
+                                    </span>
+                                `).join('')}
+                            </div>
+                            <div class="tag-input-container">
+                                <input type="text" class="tag-input" placeholder="Add tag...">
+                                <div class="tag-suggestions"></div>
+                            </div>
                         </div>
                         <div>
                             ${!activity.ended_at ? 
@@ -357,6 +455,91 @@
             document.querySelectorAll('.stop-btn').forEach(btn => {
                 btn.addEventListener('click', handleStopClick);
             });
+
+            // Add event listeners for tag functionality
+            document.querySelectorAll('.activity').forEach(activityDiv => {
+                const index = activityDiv.dataset.index;
+                const activity = activities[index];
+                const tagInput = activityDiv.querySelector('.tag-input');
+                const tagSuggestions = activityDiv.querySelector('.tag-suggestions');
+                const tagsContainer = activityDiv.querySelector('.tags');
+
+                // Handle tag input
+                tagInput.addEventListener('input', () => {
+                    const value = tagInput.value.trim();
+                    if (value) {
+                        const suggestions = tags.filter(tag => 
+                            tag.toLowerCase().includes(value.toLowerCase()) &&
+                            !(activity.tags || []).includes(tag)
+                        );
+                        if (suggestions.length > 0) {
+                            tagSuggestions.innerHTML = suggestions
+                                .map(tag => `<div class="tag-suggestion">${tag}</div>`)
+                                .join('');
+                            tagSuggestions.style.display = 'block';
+                        } else {
+                            tagSuggestions.style.display = 'none';
+                        }
+                    } else {
+                        tagSuggestions.style.display = 'none';
+                    }
+                });
+
+                // Handle tag suggestion click
+                tagSuggestions.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tag-suggestion')) {
+                        const tag = e.target.textContent;
+                        if (!(activity.tags || []).includes(tag)) {
+                            if (!activity.tags) activity.tags = [];
+                            activity.tags.push(tag);
+                            tagsContainer.innerHTML += `
+                                <span class="tag">
+                                    ${tag}
+                                    <span class="tag-remove" data-tag="${tag}">×</span>
+                                </span>
+                            `;
+                        }
+                        tagInput.value = '';
+                        tagSuggestions.style.display = 'none';
+                        localStorage.setItem('timeTrackerActivities', JSON.stringify(activities));
+                    }
+                });
+
+                // Handle tag removal
+                tagsContainer.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tag-remove')) {
+                        const tagToRemove = e.target.dataset.tag;
+                        if (!activity.tags) activity.tags = [];
+                        activity.tags = activity.tags.filter(tag => tag !== tagToRemove);
+                        e.target.closest('.tag').remove();
+                        localStorage.setItem('timeTrackerActivities', JSON.stringify(activities));
+                    }
+                });
+
+                // Handle tag input keydown
+                tagInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && tagInput.value.trim()) {
+                        const newTag = tagInput.value.trim();
+                        if (!(activity.tags || []).includes(newTag)) {
+                            if (!activity.tags) activity.tags = [];
+                            activity.tags.push(newTag);
+                            if (!tags.includes(newTag)) {
+                                tags.push(newTag);
+                                localStorage.setItem('timeTrackerTags', JSON.stringify(tags));
+                            }
+                            tagsContainer.innerHTML += `
+                                <span class="tag">
+                                    ${newTag}
+                                    <span class="tag-remove" data-tag="${newTag}">×</span>
+                                </span>
+                            `;
+                            localStorage.setItem('timeTrackerActivities', JSON.stringify(activities));
+                        }
+                        tagInput.value = '';
+                        tagSuggestions.style.display = 'none';
+                    }
+                });
+            });
         }
 
         // Handle form submission
@@ -374,7 +557,8 @@
             const newActivity = {
                 text: activityText,
                 timestamp: new Date().toISOString(),
-                ended_at: null
+                ended_at: null,
+                tags: []
             };
 
             // Add to activities array
@@ -404,7 +588,8 @@
                 const newActivity = {
                     text: activityText,
                     timestamp: new Date().toISOString(),
-                    ended_at: null
+                    ended_at: null,
+                    tags: []
                 };
 
                 // Add to activities array
