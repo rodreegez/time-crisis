@@ -361,18 +361,43 @@
             margin-bottom: 2rem;
             backdrop-filter: blur(10px);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
 
         .tag-summary h2 {
             margin: 0 0 1rem 0;
             font-size: 1.5rem;
             color: #ff4d4d;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+
+        .tag-summary h2::after {
+            content: '▼';
+            font-size: 0.8em;
+            transition: transform 0.3s ease;
+        }
+
+        .tag-summary.collapsed h2::after {
+            transform: rotate(-90deg);
         }
 
         .tag-stats {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 1rem;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+            max-height: 1000px;
+        }
+
+        .tag-summary.collapsed .tag-stats {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
         }
 
         .tag-stat {
@@ -442,7 +467,7 @@
         <button class="quick-action-btn" data-activity="Operations" data-tag="Operations">⚙️ Operations</button>
     </div>
 
-    <div class="tag-summary">
+    <div class="tag-summary collapsed">
         <h2>Time Distribution</h2>
         <div class="tag-stats"></div>
     </div>
@@ -879,6 +904,19 @@
             
             return colors[tag] || '#ff4d4d';
         }
+
+        // Add click handler for tag summary collapse/expand
+        document.querySelector('.tag-summary h2').addEventListener('click', function() {
+            const summary = this.closest('.tag-summary');
+            summary.classList.toggle('collapsed');
+            
+            // Store preference in localStorage
+            localStorage.setItem('tagSummaryCollapsed', summary.classList.contains('collapsed'));
+        });
+
+        // Restore collapse state from localStorage
+        const tagSummaryCollapsed = localStorage.getItem('tagSummaryCollapsed') === 'true';
+        document.querySelector('.tag-summary').classList.toggle('collapsed', tagSummaryCollapsed);
 
         // Initial display
         displayActivities();
