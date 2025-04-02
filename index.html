@@ -516,51 +516,54 @@
             padding: 2rem;
             width: 90%;
             max-width: 600px;
-            max-height: 80vh;
+            max-height: 90vh;
             overflow-y: auto;
         }
 
-        .quick-actions-modal h2 {
-            color: #ff4d4d;
-            margin: 0 0 1rem 0;
-        }
-
-        .quick-actions-list {
-            margin-bottom: 1rem;
-        }
-
         .quick-action-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.5rem;
-            background: rgba(255, 255, 255, 0.1);
+            display: grid;
+            grid-template-columns: auto minmax(40px, auto) 1fr auto;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 4px;
             margin-bottom: 0.5rem;
+            align-items: center;
+        }
+
+        .quick-action-item:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .quick-action-item input {
-            flex: 1;
             padding: 0.5rem;
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid #ff4d4d;
             border-radius: 4px;
             color: #000;
+            font-size: 0.9rem;
         }
 
         .quick-action-item .emoji-picker {
-            padding: 0.5rem;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #ff4d4d;
-            border-radius: 4px;
-            color: #000;
-            cursor: pointer;
+            width: 40px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .quick-action-item .action-text {
+            width: 100%;
         }
 
         .quick-action-item .drag-handle {
             cursor: move;
-            padding: 0.5rem;
             color: #ff4d4d;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            font-size: 1.2rem;
+        }
+
+        .quick-action-item .drag-handle:hover {
+            opacity: 1;
         }
 
         .quick-action-item .remove-action {
@@ -570,13 +573,41 @@
             background: none;
             border: none;
             font-size: 1.2rem;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .quick-action-item .remove-action:hover {
+            opacity: 1;
+        }
+
+        .add-quick-action {
+            width: 100%;
+            margin: 1rem 0;
+            padding: 0.75rem;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .add-quick-action:hover {
+            background: #45a049;
+            transform: translateY(-1px);
         }
 
         .modal-buttons {
             display: flex;
             gap: 1rem;
             justify-content: flex-end;
-            margin-top: 1rem;
+            margin-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 1.5rem;
         }
 
         .modal-buttons button {
@@ -598,10 +629,6 @@
 
         .modal-buttons .cancel-btn:hover {
             background-color: #5a6268;
-        }
-
-        .add-quick-action {
-            background: #4CAF50;
         }
 
         @keyframes pulse {
@@ -1262,10 +1289,9 @@
             actionsList.innerHTML = quickActions.map((action, index) => `
                 <div class="quick-action-item">
                     <span class="drag-handle">↕️</span>
-                    <input type="text" class="emoji-picker" value="${action.emoji}" placeholder="Emoji">
+                    <input type="text" class="emoji-picker" value="${action.emoji}" placeholder="📌">
                     <input type="text" class="action-text" value="${action.text}" placeholder="Action Name">
-                    <input type="text" class="action-tag" value="${action.tag}" placeholder="Tag">
-                    <button class="remove-action" onclick="removeQuickAction(${index})">×</button>
+                    <button class="remove-action" onclick="removeQuickAction(${index})" title="Remove Action">×</button>
                 </div>
             `).join('');
         }
