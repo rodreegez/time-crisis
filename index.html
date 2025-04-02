@@ -354,6 +354,64 @@
             background-color: rgba(255, 77, 77, 0.2);
         }
 
+        .tag-summary {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tag-summary h2 {
+            margin: 0 0 1rem 0;
+            font-size: 1.5rem;
+            color: #ff4d4d;
+        }
+
+        .tag-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .tag-stat {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 4px;
+            border-left: 4px solid;
+        }
+
+        .tag-stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .tag-stat-name {
+            font-weight: bold;
+            color: white;
+        }
+
+        .tag-stat-time {
+            color: #4CAF50;
+            font-size: 0.875rem;
+        }
+
+        .tag-stat-bar {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .tag-stat-fill {
+            height: 100%;
+            background: currentColor;
+            transition: width 0.3s ease;
+        }
+
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
@@ -384,6 +442,11 @@
         <button class="quick-action-btn" data-activity="Operations" data-tag="Operations">⚙️ Operations</button>
     </div>
 
+    <div class="tag-summary">
+        <h2>Time Distribution</h2>
+        <div class="tag-stats"></div>
+    </div>
+
     <div id="activities"></div>
 
     <script>
@@ -411,6 +474,24 @@
                 return `${minutes}m ${seconds}s`;
             } else {
                 return `${seconds}s`;
+            }
+        }
+
+        // Calculate duration in milliseconds
+        function getDurationMs(startTime, endTime) {
+            if (!endTime) return 0;
+            return new Date(endTime) - new Date(startTime);
+        }
+
+        // Format duration from milliseconds
+        function formatDurationFromMs(duration) {
+            const hours = Math.floor(duration / (1000 * 60 * 60));
+            const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
             }
         }
 
@@ -543,6 +624,8 @@
                     }
                 });
             });
+
+            updateTagSummary();
         }
 
         // Handle form submission
@@ -728,6 +811,73 @@
                 localStorage.setItem('timeTrackerActivities', JSON.stringify(activities));
                 displayActivities();
             });
+        }
+
+        // Update tag summary
+        function updateTagSummary() {
+            const tagStats = {};
+            let totalDuration = 0;
+            let unclassifiedDuration = 0;
+
+            // Calculate total time for each tag
+            activities.forEach(activity => {
+                if (!activity.ended_at) return; // Skip active tasks
+                const duration = getDurationMs(activity.timestamp, activity.ended_at);
+                
+                if (!activity.tags || activity.tags.length === 0) {
+                    unclassifiedDuration += duration;
+                } else {
+                    activity.tags.forEach(tag => {
+                        tagStats[tag] = (tagStats[tag] || 0) + duration;
+                    });
+                }
+                
+                totalDuration += duration;
+            });
+
+            // Add unclassified to tagStats if there are any
+            if (unclassifiedDuration > 0) {
+                tagStats['Unclassified'] = unclassifiedDuration;
+            }
+
+            // Generate HTML for tag stats
+            const tagStatsHtml = Object.entries(tagStats)
+                .sort((a, b) => b[1] - a[1]) // Sort by duration descending
+                .map(([tag, duration]) => {
+                    const percentage = totalDuration ? (duration / totalDuration * 100).toFixed(1) : 0;
+                    const tagColor = getTagColor(tag);
+                    return `
+                        <div class="tag-stat" style="border-left-color: ${tagColor}">
+                            <div class="tag-stat-header">
+                                <span class="tag-stat-name">${tag}</span>
+                                <span class="tag-stat-time">${formatDurationFromMs(duration)} (${percentage}%)</span>
+                            </div>
+                            <div class="tag-stat-bar">
+                                <div class="tag-stat-fill" style="width: ${percentage}%; background: ${tagColor}"></div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .join('');
+
+            document.querySelector('.tag-stats').innerHTML = tagStatsHtml;
+        }
+
+        // Get a consistent color for a tag
+        function getTagColor(tag) {
+            const colors = {
+                'Design': '#FF6B6B',
+                'Programming': '#4ECDC4',
+                'Product': '#45B7D1',
+                'Admin': '#96CEB4',
+                'Travel': '#FFEEAD',
+                'Break': '#D4A5A5',
+                'Hiring': '#9B59B6',
+                'Operations': '#3498DB',
+                'Unclassified': '#95A5A6'  // A neutral gray for unclassified tasks
+            };
+            
+            return colors[tag] || '#ff4d4d';
         }
 
         // Initial display
