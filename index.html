@@ -375,14 +375,34 @@
             user-select: none;
         }
 
-        .tag-summary h2::after {
-            content: '▼';
-            font-size: 0.8em;
-            transition: transform 0.3s ease;
+        .time-range-filters {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            transition: all 0.3s ease;
+            max-height: 50px;
+            opacity: 1;
         }
 
-        .tag-summary.collapsed h2::after {
-            transform: rotate(-90deg);
+        .time-range-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 77, 77, 0.3);
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .time-range-btn:hover {
+            background: rgba(255, 77, 77, 0.2);
+        }
+
+        .time-range-btn.active {
+            background: rgba(255, 77, 77, 0.3);
+            border-color: #ff4d4d;
         }
 
         .tag-stats {
@@ -398,6 +418,13 @@
             max-height: 0;
             opacity: 0;
             margin-top: 0;
+        }
+
+        .tag-summary.collapsed .time-range-filters {
+            max-height: 0;
+            opacity: 0;
+            margin: 0;
+            overflow: hidden;
         }
 
         .tag-stat {
@@ -469,6 +496,13 @@
 
     <div class="tag-summary collapsed">
         <h2>Time Distribution</h2>
+        <div class="time-range-filters">
+            <button class="time-range-btn active" data-range="all">All Time</button>
+            <button class="time-range-btn" data-range="today">Today</button>
+            <button class="time-range-btn" data-range="week">This Week</button>
+            <button class="time-range-btn" data-range="month">This Month</button>
+            <button class="time-range-btn" data-range="year">This Year</button>
+        </div>
         <div class="tag-stats"></div>
     </div>
 
@@ -838,15 +872,43 @@
             });
         }
 
-        // Update tag summary
-        function updateTagSummary() {
+        // Get start of day/week/month/year
+        function getStartOf(range) {
+            const now = new Date();
+            switch (range) {
+                case 'today':
+                    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                case 'week':
+                    const startOfWeek = new Date(now);
+                    startOfWeek.setDate(now.getDate() - now.getDay()); // Start from Sunday
+                    startOfWeek.setHours(0, 0, 0, 0);
+                    return startOfWeek;
+                case 'month':
+                    return new Date(now.getFullYear(), now.getMonth(), 1);
+                case 'year':
+                    return new Date(now.getFullYear(), 0, 1);
+                default:
+                    return new Date(0); // Beginning of time for 'all'
+            }
+        }
+
+        // Update tag summary for specific time range
+        function updateTagSummary(timeRange = 'all') {
             const tagStats = {};
             let totalDuration = 0;
             let unclassifiedDuration = 0;
+            const rangeStart = getStartOf(timeRange);
 
             // Calculate total time for each tag
             activities.forEach(activity => {
                 if (!activity.ended_at) return; // Skip active tasks
+                
+                const activityStart = new Date(activity.timestamp);
+                const activityEnd = new Date(activity.ended_at);
+                
+                // Skip if activity is outside the selected time range
+                if (activityStart < rangeStart) return;
+                
                 const duration = getDurationMs(activity.timestamp, activity.ended_at);
                 
                 if (!activity.tags || activity.tags.length === 0) {
@@ -885,7 +947,7 @@
                 })
                 .join('');
 
-            document.querySelector('.tag-stats').innerHTML = tagStatsHtml;
+            document.querySelector('.tag-stats').innerHTML = tagStatsHtml || '<div class="tag-stat">No data for selected time range</div>';
         }
 
         // Get a consistent color for a tag
@@ -917,6 +979,36 @@
         // Restore collapse state from localStorage
         const tagSummaryCollapsed = localStorage.getItem('tagSummaryCollapsed') === 'true';
         document.querySelector('.tag-summary').classList.toggle('collapsed', tagSummaryCollapsed);
+
+        // Add click handlers for time range buttons
+        document.querySelectorAll('.time-range-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active state
+                document.querySelectorAll('.time-range-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                // Update stats for selected range
+                updateTagSummary(btn.dataset.range);
+
+                // Store preference
+                localStorage.setItem('selectedTimeRange', btn.dataset.range);
+            });
+        });
+
+        // Restore time range preference
+        const savedTimeRange = localStorage.getItem('selectedTimeRange') || 'all';
+        const savedRangeBtn = document.querySelector(`.time-range-btn[data-range="${savedTimeRange}"]`);
+        if (savedRangeBtn) {
+            savedRangeBtn.click();
+        }
+
+        // Update the displayActivities function to use the current time range
+        const originalDisplayActivities = displayActivities;
+        displayActivities = function() {
+            originalDisplayActivities();
+            const activeRange = document.querySelector('.time-range-btn.active').dataset.range;
+            updateTagSummary(activeRange);
+        };
 
         // Initial display
         displayActivities();
