@@ -374,11 +374,12 @@
     </form>
 
     <div class="quick-actions">
-        <button class="quick-action-btn" data-activity="Coffee Break">☕ Coffee Break</button>
-        <button class="quick-action-btn" data-activity="Meeting">👥 Meeting</button>
-        <button class="quick-action-btn" data-activity="Lunch">🍽️ Lunch</button>
-        <button class="quick-action-btn" data-activity="Phone Call">📱 Phone Call</button>
-        <button class="quick-action-btn" data-activity="AFK">🚶 AFK</button>
+        <button class="quick-action-btn" data-activity="Design" data-tag="Design">🎨 Design</button>
+        <button class="quick-action-btn" data-activity="Programming" data-tag="Programming">💻 Programming</button>
+        <button class="quick-action-btn" data-activity="Product" data-tag="Product">📱 Product</button>
+        <button class="quick-action-btn" data-activity="Admin" data-tag="Admin">📊 Admin</button>
+        <button class="quick-action-btn" data-activity="Travel" data-tag="Travel">✈️ Travel</button>
+        <button class="quick-action-btn" data-activity="Break" data-tag="Break">☕ Break</button>
     </div>
 
     <div id="activities"></div>
@@ -578,6 +579,7 @@
         document.querySelectorAll('.quick-action-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const activityText = btn.dataset.activity;
+                const activityTag = btn.dataset.tag;
 
                 // End the current active task if there is one
                 if (activities.length > 0 && !activities[0].ended_at) {
@@ -589,8 +591,14 @@
                     text: activityText,
                     timestamp: new Date().toISOString(),
                     ended_at: null,
-                    tags: []
+                    tags: [activityTag]  // Initialize with the activity tag
                 };
+
+                // Add tag to global tags if it doesn't exist
+                if (!tags.includes(activityTag)) {
+                    tags.push(activityTag);
+                    localStorage.setItem('timeTrackerTags', JSON.stringify(tags));
+                }
 
                 // Add to activities array
                 activities.unshift(newActivity);
