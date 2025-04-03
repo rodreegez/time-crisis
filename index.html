@@ -672,6 +672,7 @@
         <div class="time-range-filters">
             <button class="time-range-btn active" data-range="all">All Time</button>
             <button class="time-range-btn" data-range="today">Today</button>
+            <button class="time-range-btn" data-range="yesterday">Yesterday</button>
             <button class="time-range-btn" data-range="week">This Week</button>
             <button class="time-range-btn" data-range="month">This Month</button>
             <button class="time-range-btn" data-range="year">This Year</button>
@@ -1061,6 +1062,10 @@
             switch (range) {
                 case 'today':
                     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                case 'yesterday':
+                    const yesterday = new Date(now);
+                    yesterday.setDate(now.getDate() - 1);
+                    return new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
                 case 'week':
                     const startOfWeek = new Date(now);
                     startOfWeek.setDate(now.getDate() - now.getDay()); // Start from Sunday
