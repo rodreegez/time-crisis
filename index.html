@@ -402,6 +402,14 @@
             user-select: none;
         }
 
+        .total-time {
+            font-size: 1rem;
+            color: #4CAF50;
+            font-weight: normal;
+            margin-left: 1rem;
+            opacity: 0.9;
+        }
+
         .time-range-filters {
             display: flex;
             gap: 0.5rem;
@@ -668,7 +676,7 @@
     </div>
 
     <div class="tag-summary collapsed">
-        <h2>Time Distribution</h2>
+        <h2>Time Distribution <span class="total-time"></span></h2>
         <div class="time-range-filters">
             <button class="time-range-btn active" data-range="all">All Time</button>
             <button class="time-range-btn" data-range="today">Today</button>
@@ -1109,6 +1117,14 @@
                 
                 totalDuration += duration;
             });
+
+            // Update total time display
+            const totalTimeElement = document.querySelector('.total-time');
+            if (totalDuration > 0) {
+                totalTimeElement.textContent = `Total: ${formatDurationFromMs(totalDuration)}`;
+            } else {
+                totalTimeElement.textContent = 'No data';
+            }
 
             // Add unclassified to tagStats if there are any
             if (unclassifiedDuration > 0) {
