@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time Crisis</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     
     <!-- Open Graph / Social Media Meta Tags -->
     <meta property="og:title" content="Time Crisis - Mission-Critical Time Tracking">
@@ -1326,6 +1327,122 @@
         // Initialize everything
         updateQuickActions();
         initQuickActionsModal();
+
+        // Initialize SQL.js
+        let db;
+        let isMigrated = false;
+
+        async function initDatabase() {
+            try {
+                // Load SQL.js
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                });
+
+                // Create new database
+                db = new SQL.Database();
+
+                // Create tables
+                db.run(`
+                    CREATE TABLE IF NOT EXISTS activities (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        text TEXT NOT NULL,
+                        timestamp TEXT NOT NULL,
+                        ended_at TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS tags (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT UNIQUE NOT NULL,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS activity_tags (
+                        activity_id INTEGER,
+                        tag_id INTEGER,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (activity_id, tag_id),
+                        FOREIGN KEY (activity_id) REFERENCES activities(id),
+                        FOREIGN KEY (tag_id) REFERENCES tags(id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS quick_actions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        emoji TEXT NOT NULL,
+                        text TEXT NOT NULL,
+                        tag TEXT NOT NULL,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                `);
+
+                // Check if we need to migrate from localStorage
+                const activities = JSON.parse(localStorage.getItem('timeTrackerActivities') || '[]');
+                if (activities.length > 0 && !isMigrated) {
+                    await migrateFromLocalStorage();
+                }
+
+            } catch (error) {
+                console.error('Database initialization failed:', error);
+                // Fallback to localStorage
+                alert('Database initialization failed. Falling back to localStorage.');
+            }
+        }
+
+        async function migrateFromLocalStorage() {
+            try {
+                // Start transaction
+                db.run('BEGIN TRANSACTION');
+
+                // Migrate activities
+                const activities = JSON.parse(localStorage.getItem('timeTrackerActivities') || '[]');
+                for (const activity of activities) {
+                    const stmt = db.prepare(`
+                        INSERT INTO activities (text, timestamp, ended_at)
+                        VALUES (?, ?, ?)
+                    `);
+                    stmt.run([activity.text, activity.timestamp, activity.ended_at]);
+                    stmt.free();
+                }
+
+                // Migrate tags
+                const tags = JSON.parse(localStorage.getItem('timeTrackerTags') || '[]');
+                for (const tag of tags) {
+                    const stmt = db.prepare(`
+                        INSERT OR IGNORE INTO tags (name)
+                        VALUES (?)
+                    `);
+                    stmt.run([tag]);
+                    stmt.free();
+                }
+
+                // Migrate quick actions
+                const quickActions = JSON.parse(localStorage.getItem('quickActions') || '[]');
+                for (const action of quickActions) {
+                    const stmt = db.prepare(`
+                        INSERT INTO quick_actions (emoji, text, tag)
+                        VALUES (?, ?, ?)
+                    `);
+                    stmt.run([action.emoji, action.text, action.tag]);
+                    stmt.free();
+                }
+
+                // Commit transaction
+                db.run('COMMIT');
+                isMigrated = true;
+
+                // Notify user
+                alert('Data successfully migrated to database!');
+            } catch (error) {
+                // Rollback on error
+                db.run('ROLLBACK');
+                console.error('Migration failed:', error);
+                alert('Migration failed. Data remains in localStorage.');
+            }
+        }
+
+        // Initialize database when page loads
+        initDatabase();
     </script>
 </body>
 </html> 
